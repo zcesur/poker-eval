@@ -3,37 +3,47 @@ module Lib
   )
 where
 
+import qualified Text.Parsec                   as Parsec
+import           Text.Parsec.String
+import           Text.Parsec.Char
+import           Text.Parsec.Combinator
+
+import           Data.Functor                   ( ($>) )
+import           Control.Applicative            ( (<|>) )
+
 
 data Suit = Spades | Clubs | Diamonds | Hearts deriving (Show)
 data Rank = R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | R10 | J | Q | K | A deriving (Show)
 data Card = Card Rank Suit deriving (Show)
 
-toCard :: String -> Maybe Card
-toCard [r, s] = Card <$> toRank r <*> toSuit s
-toCard _      = Nothing
+suit :: Parser Suit
+suit =
+  (char 'S' $> Spades)
+    <|> (char 'C' $> Clubs)
+    <|> (char 'D' $> Diamonds)
+    <|> (char 'H' $> Hearts)
 
-toRank :: Char -> Maybe Rank
-toRank '2' = Just R2
-toRank '3' = Just R3
-toRank '4' = Just R4
-toRank '5' = Just R5
-toRank '6' = Just R6
-toRank '7' = Just R7
-toRank '8' = Just R8
-toRank '9' = Just R9
-toRank 'T' = Just R10
-toRank 'J' = Just J
-toRank 'Q' = Just Q
-toRank 'K' = Just K
-toRank 'A' = Just A
-toRank _   = Nothing
+rank :: Parser Rank
+rank =
+  (char '2' $> R2)
+    <|> (char '3' $> R3)
+    <|> (char '4' $> R4)
+    <|> (char '5' $> R5)
+    <|> (char '6' $> R6)
+    <|> (char '7' $> R7)
+    <|> (char '8' $> R8)
+    <|> (char '9' $> R9)
+    <|> (char 'T' $> R10)
+    <|> (char 'J' $> J)
+    <|> (char 'Q' $> Q)
+    <|> (char 'K' $> K)
+    <|> (char 'A' $> A)
 
-toSuit :: Char -> Maybe Suit
-toSuit 'S' = Just Spades
-toSuit 'C' = Just Clubs
-toSuit 'D' = Just Diamonds
-toSuit 'H' = Just Hearts
-toSuit _   = Nothing
+card :: Parser Card
+card = Card <$> rank <*> suit
+
+parse :: Parser a -> String -> Either Parsec.ParseError a
+parse p = Parsec.parse (p <* eof) ""
 
 someFunc :: IO ()
-someFunc = print $ toCard "9S"
+someFunc = print $ parse card "9S"
