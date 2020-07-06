@@ -10,17 +10,23 @@ import           Text.Parsec.String
 import           Text.Parsec.Char
 import           Text.Parsec.Combinator
 
+import           Data.Finite
 import qualified Data.Vector.Sized             as V
+import           Data.Vector.Sized              ( (//) )
 
 import           Data.Functor                   ( ($>) )
 import           Control.Applicative            ( (<|>) )
+import           Control.Monad.State
 
+data Suit = Spades | Clubs | Diamonds | Hearts deriving (Show, Eq, Ord)
+data Rank = R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | R10 | J | Q | K | A deriving (Show, Eq, Ord)
+data Card = Card Rank Suit deriving (Show, Eq, Ord)
 
-data Suit = Spades | Clubs | Diamonds | Hearts deriving (Show)
-data Rank = R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | R10 | J | Q | K | A deriving (Show)
-data Card = Card Rank Suit deriving (Show)
-
+type HandIndex = Finite 5
 type Hand = V.Vector 5 Card
+
+handIndices :: V.Vector 5 HandIndex
+handIndices = V.generate id
 
 suit :: Parser Suit
 suit =
@@ -57,5 +63,18 @@ hands = (,) <$> hand <*> (space >> hand)
 parse :: Parser a -> String -> Either Parsec.ParseError a
 parse p = Parsec.parse (p <* eof) ""
 
+sort :: Hand -> Hand
+sort cs = snd $ execState (mapM_ move handIndices) (cs, cs)
+ where
+  pop :: State (Hand, Hand) Card
+  pop = state $ \(cs, cs') ->
+    (V.maximum cs, (cs // [(V.maxIndex cs, V.minimum cs)], cs'))
+
+  push :: HandIndex -> Card -> State (Hand, Hand) ()
+  push i c = state $ \(cs, cs') -> ((), (cs, cs' // [(i, c)]))
+
+  move :: HandIndex -> State (Hand, Hand) ()
+  move i = pop >>= push i
+
 someFunc :: IO ()
-someFunc = print $ parse hands "8C TS KC 9H 4S 7D 2S 5D 3S AC"
+someFunc = print $ sort . fst <$> parse hands "8C TS KC 9H 4S 7D 2S 5D 3S AC"
