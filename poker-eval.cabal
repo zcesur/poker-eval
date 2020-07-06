@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 79111458c9d4dc501f13e2be08e83843df517af521cb2e73afa4ec20ae1a2970
+-- hash: e56b9d17b3efe6aaa5dc763fd9cefe5cc9d6667386890294b9a065c7fad94836
 
 name:           poker-eval
 version:        0.1.0.0
@@ -35,6 +35,7 @@ library
   build-depends:
       base >=4.7 && <5
     , parsec
+    , vector-sized
   default-language: Haskell2010
 
 executable poker-eval-exe
@@ -48,6 +49,7 @@ executable poker-eval-exe
       base >=4.7 && <5
     , parsec
     , poker-eval
+    , vector-sized
   default-language: Haskell2010
 
 test-suite poker-eval-test
@@ -62,4 +64,5 @@ test-suite poker-eval-test
       base >=4.7 && <5
     , parsec
     , poker-eval
+    , vector-sized
   default-language: Haskell2010

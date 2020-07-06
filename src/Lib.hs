@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds                  #-}
+
 module Lib
   ( someFunc
   )
@@ -8,6 +10,8 @@ import           Text.Parsec.String
 import           Text.Parsec.Char
 import           Text.Parsec.Combinator
 
+import qualified Data.Vector.Sized             as V
+
 import           Data.Functor                   ( ($>) )
 import           Control.Applicative            ( (<|>) )
 
@@ -16,8 +20,7 @@ data Suit = Spades | Clubs | Diamonds | Hearts deriving (Show)
 data Rank = R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | R10 | J | Q | K | A deriving (Show)
 data Card = Card Rank Suit deriving (Show)
 
-data Cards5 = Cards5 Card Card Card Card Card deriving (Show)
-type Hand = Cards5
+type Hand = V.Vector 5 Card
 
 suit :: Parser Suit
 suit =
@@ -46,13 +49,7 @@ card :: Parser Card
 card = Card <$> rank <*> suit
 
 hand :: Parser Hand
-hand =
-  Cards5
-    <$> card
-    <*> (space >> card)
-    <*> (space >> card)
-    <*> (space >> card)
-    <*> (space >> card)
+hand = V.cons <$> card <*> V.replicateM (space >> card)
 
 hands :: Parser (Hand, Hand)
 hands = (,) <$> hand <*> (space >> hand)
