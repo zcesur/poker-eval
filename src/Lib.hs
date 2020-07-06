@@ -16,6 +16,9 @@ data Suit = Spades | Clubs | Diamonds | Hearts deriving (Show)
 data Rank = R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | R10 | J | Q | K | A deriving (Show)
 data Card = Card Rank Suit deriving (Show)
 
+data Cards5 = Cards5 Card Card Card Card Card deriving (Show)
+type Hand = Cards5
+
 suit :: Parser Suit
 suit =
   (char 'S' $> Spades)
@@ -42,8 +45,20 @@ rank =
 card :: Parser Card
 card = Card <$> rank <*> suit
 
+hand :: Parser Hand
+hand =
+  Cards5
+    <$> card
+    <*> (space >> card)
+    <*> (space >> card)
+    <*> (space >> card)
+    <*> (space >> card)
+
+hands :: Parser (Hand, Hand)
+hands = (,) <$> hand <*> (space >> hand)
+
 parse :: Parser a -> String -> Either Parsec.ParseError a
 parse p = Parsec.parse (p <* eof) ""
 
 someFunc :: IO ()
-someFunc = print $ parse card "9S"
+someFunc = print $ parse hands "8C TS KC 9H 4S 7D 2S 5D 3S AC"
