@@ -3,7 +3,6 @@
 
 module PokerEval
   ( hands
-  , cmpEval
   )
 where
 
@@ -26,9 +25,12 @@ data Rank = Two | Three | Four | Five | Six | Seven | Eight | Nine | Ten | Jack 
 data Card = Card Rank Suit deriving (Show, Eq, Ord)
 
 type HandIndex = Finite 5
-type Hand = V.Vector 5 Card
+newtype Hand s = Hand (V.Vector 5 Card)
 type Ranks n = V.Vector n Rank
 type Suits n = V.Vector n Suit
+
+data Sorted
+data Unsorted
 
 data HandEval = HighCard (Ranks 5)
               | OnePair Rank (Ranks 3)
@@ -70,30 +72,43 @@ rank =
 card :: Parser Card
 card = Card <$> rank <*> suit
 
-hand :: Parser Hand
-hand = V.cons <$> card <*> V.replicateM (space >> card)
+hand :: Parser (Hand Unsorted)
+hand = Hand <$> (V.cons <$> card <*> V.replicateM (space >> card))
 
-hands :: Parser (Hand, Hand)
+hands :: Parser (Hand Unsorted, Hand Unsorted)
 hands = (,) <$> hand <*> (space >> hand)
 
-sort :: Hand -> Hand
-sort cs = snd $ execState (mapM_ move handIndices) (cs, cs)
- where
-  pop :: State (Hand, Hand) Card
-  pop = state $ \(cs, cs') ->
-    (V.maximum cs, (cs // [(V.maxIndex cs, V.minimum cs)], cs'))
+class Sort a where
+  sort :: Hand a -> Hand Sorted
 
-  push :: HandIndex -> Card -> State (Hand, Hand) ()
-  push i c = state $ \(cs, cs') -> ((), (cs, cs' // [(i, c)]))
+instance Sort Sorted where
+  sort = id
 
-  move :: HandIndex -> State (Hand, Hand) ()
-  move i = pop >>= push i
+instance Sort Unsorted where
+  sort (Hand cs) = snd $ execState (mapM_ move handIndices) (Hand cs, Hand cs)
+   where
+    pop :: State (Hand Unsorted, Hand Sorted) Card
+    pop = state $ \((Hand cs), (Hand cs')) ->
+      (V.maximum cs, (Hand (cs // [(V.maxIndex cs, V.minimum cs)]), Hand cs'))
+
+    push :: HandIndex -> Card -> State (Hand Unsorted, Hand Sorted) ()
+    push i c = state
+      $ \((Hand cs), (Hand cs')) -> ((), (Hand cs, Hand (cs' // [(i, c)])))
+
+    move :: HandIndex -> State (Hand Unsorted, Hand Sorted) ()
+    move i = pop >>= push i
 
 toRank :: Card -> Rank
 toRank (Card r _) = r
 
 toSuit :: Card -> Suit
 toSuit (Card _ s) = s
+
+ranks :: Hand a -> Ranks 5
+ranks (Hand cs) = V.map toRank cs
+
+suits :: Hand a -> Suits 5
+suits (Hand cs) = V.map toSuit cs
 
 same :: (Eq a) => V.Vector (1 + n) a -> Bool
 same xs = all (== V.head xs) xs
@@ -104,15 +119,16 @@ straight rs | same sums = Just (V.head rs)
             | otherwise = Nothing
   where sums = V.imap (\i r -> fromInteger (getFinite i) + fromEnum r) rs
 
-groups :: Hand -> [(Int, Rank)]
-groups =
+groups :: Hand Sorted -> [(Int, Rank)]
+groups (Hand cs) =
   L.sortBy (flip compare)
     . map (\rs -> (length rs, NE.head rs))
     . NE.group
     . V.toList
     . V.map toRank
+    $ cs
 
-evalGroups :: Hand -> Maybe HandEval
+evalGroups :: Hand Sorted -> Maybe HandEval
 evalGroups xs = case groups xs of
   [(4, x), (1, y)]         -> Just (Quads x y)
   [(3, x), (2, y)]         -> Just (FullHouse x y)
@@ -121,22 +137,25 @@ evalGroups xs = case groups xs of
   [(2, x), (1, y), (1, z), (1, t)] -> Just (OnePair x (V.fromTuple (y, z, t)))
   _                        -> Nothing
 
-eval :: Hand -> HandEval
-eval cs | Just h <- str, same ss       = StraightFlush h
-        | Just (Quads q k) <- gs       = Quads q k
-        | Just (FullHouse t p) <- gs   = FullHouse t p
-        | same ss                      = Flush rs
-        | Just h <- str                = Straight h
-        | Just (Trips t ks) <- gs      = Trips t ks
-        | Just (TwoPair p1 p2 k) <- gs = TwoPair p1 p2 k
-        | Just (OnePair p ks) <- gs    = OnePair p ks
-        | otherwise                    = HighCard rs
+eval :: Sort a => Hand a -> HandEval
+eval h | Just h <- str, same ss       = StraightFlush h
+       | Just (Quads q k) <- gs       = Quads q k
+       | Just (FullHouse t p) <- gs   = FullHouse t p
+       | same ss                      = Flush rs
+       | Just h <- str                = Straight h
+       | Just (Trips t ks) <- gs      = Trips t ks
+       | Just (TwoPair p1 p2 k) <- gs = TwoPair p1 p2 k
+       | Just (OnePair p ks) <- gs    = OnePair p ks
+       | otherwise                    = HighCard rs
  where
-  rs  = V.map toRank cs'
-  ss  = V.map toSuit cs'
-  gs  = evalGroups cs'
+  rs  = ranks h'
+  ss  = suits h'
+  gs  = evalGroups h'
   str = straight rs
-  cs' = sort cs
+  h'  = sort h
 
-cmpEval :: Hand -> Hand -> Ordering
-cmpEval h1 h2 = compare (eval h1) (eval h2)
+instance Sort a => Eq (Hand a) where
+  h1 == h2 = eval h1 == eval h2
+
+instance Sort a => Ord (Hand a) where
+  compare h1 h2 = compare (eval h1) (eval h2)

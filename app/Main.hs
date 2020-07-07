@@ -3,7 +3,7 @@ module Main where
 import           Text.Parsec                    ( parse )
 import           Text.Parsec.String             ( Parser )
 import           Text.Parsec.Combinator         ( eof )
-import           PokerEval
+import           PokerEval                      ( hands )
 
 main :: IO ()
 main = go 0
@@ -11,6 +11,6 @@ main = go 0
   go n = do
     putStrLn $ "P1 score: " ++ show n
     line <- getLine
-    if (uncurry cmpEval <$> parse hands "" line) == Right GT
+    if (uncurry compare <$> parse hands "" line) == Right GT
       then go (n + 1)
       else go n
