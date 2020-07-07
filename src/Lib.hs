@@ -102,12 +102,10 @@ toSuit (Card _ s) = s
 same :: (Eq a) => V.Vector (1 + n) a -> Bool
 same xs = all (== V.head xs) xs
 
-isFlush :: Suits 5 -> Bool
-isFlush = same
-
--- TODO: Implement five-high straight
-isStraight :: Ranks 5 -> Bool
-isStraight rs = same sums
+straight :: Ranks 5 -> Maybe Rank
+straight rs | same sums                             = Just (V.head rs)
+            | V.toList rs == A : reverse [R2 .. R5] = Just R5
+            | otherwise                             = Nothing
   where sums = V.imap (\i r -> fromInteger (getFinite i) + fromEnum r) rs
 
 groups :: Hand -> [(Int, Rank)]
@@ -128,21 +126,21 @@ evalGroups xs = case groups xs of
   _                        -> Nothing
 
 eval :: Hand -> HandEval
-eval cs | isStraight rs && isFlush ss = StraightFlush high
-        | Just (Quads x y) <- gs      = Quads x y
-        | Just (FullHouse x y) <- gs  = FullHouse x y
-        | isFlush ss                  = Flush rs
-        | isStraight rs               = Straight high
-        | Just (Trips x ks) <- gs     = Trips x ks
-        | Just (TwoPair x y z) <- gs  = TwoPair x y z
-        | Just (OnePair x ks) <- gs   = OnePair x ks
-        | otherwise                   = HighCard rs
+eval cs | Just h <- str, same ss       = StraightFlush h
+        | Just (Quads q k) <- gs       = Quads q k
+        | Just (FullHouse t p) <- gs   = FullHouse t p
+        | same ss                      = Flush rs
+        | Just h <- str                = Straight h
+        | Just (Trips t ks) <- gs      = Trips t ks
+        | Just (TwoPair p1 p2 k) <- gs = TwoPair p1 p2 k
+        | Just (OnePair p ks) <- gs    = OnePair p ks
+        | otherwise                    = HighCard rs
  where
-  high = V.head rs
-  rs   = V.map toRank cs'
-  ss   = V.map toSuit cs'
-  gs   = evalGroups cs'
-  cs'  = sort cs
+  rs  = V.map toRank cs'
+  ss  = V.map toSuit cs'
+  gs  = evalGroups cs'
+  str = straight rs
+  cs' = sort cs
 
 someFunc :: IO ()
 someFunc = do
