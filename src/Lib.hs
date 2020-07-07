@@ -2,14 +2,13 @@
 {-# LANGUAGE TypeOperators              #-}
 
 module Lib
-  ( someFunc
+  ( hands
+  , cmpEval
   )
 where
 
-import qualified Text.Parsec                   as Parsec
 import           Text.Parsec.String
 import           Text.Parsec.Char
-import           Text.Parsec.Combinator
 
 import           GHC.TypeLits
 import           Data.Finite
@@ -31,16 +30,16 @@ type Hand = V.Vector 5 Card
 type Ranks n = V.Vector n Rank
 type Suits n = V.Vector n Suit
 
-data HandEval = StraightFlush Rank
-              | Quads Rank Rank
-              | FullHouse Rank Rank
-              | Flush (Ranks 5)
-              | Straight Rank
-              | Trips Rank (Ranks 2)
-              | TwoPair Rank Rank Rank
+data HandEval = HighCard (Ranks 5)
               | OnePair Rank (Ranks 3)
-              | HighCard (Ranks 5)
-              deriving (Show)
+              | TwoPair Rank Rank Rank
+              | Trips Rank (Ranks 2)
+              | Straight Rank
+              | Flush (Ranks 5)
+              | FullHouse Rank Rank
+              | Quads Rank Rank
+              | StraightFlush Rank
+              deriving (Show, Eq, Ord)
 
 handIndices :: V.Vector 5 HandIndex
 handIndices = V.generate id
@@ -76,9 +75,6 @@ hand = V.cons <$> card <*> V.replicateM (space >> card)
 
 hands :: Parser (Hand, Hand)
 hands = (,) <$> hand <*> (space >> hand)
-
-parse :: Parser a -> String -> Either Parsec.ParseError a
-parse p = Parsec.parse (p <* eof) ""
 
 sort :: Hand -> Hand
 sort cs = snd $ execState (mapM_ move handIndices) (cs, cs)
@@ -142,9 +138,5 @@ eval cs | Just h <- str, same ss       = StraightFlush h
   str = straight rs
   cs' = sort cs
 
-someFunc :: IO ()
-someFunc = do
-  print $ eval <$> parse hand "KC TC QC 9C JC"
-  print $ eval <$> parse hand "8S TS KS 9S 4S"
-  print $ eval <$> parse hand "8S TC QH 9D JC"
-  print $ eval <$> parse hand "8C TS KC 9H 4S"
+cmpEval :: Hand -> Hand -> Ordering
+cmpEval h1 h2 = compare (eval h1) (eval h2)
