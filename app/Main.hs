@@ -3,7 +3,7 @@ module Main where
 import           Text.Parsec                    ( parse )
 import           Text.Parsec.String             ( Parser )
 import           Text.Parsec.Combinator         ( eof )
-import           Lib
+import           PokerEval
 
 main :: IO ()
 main = go 0

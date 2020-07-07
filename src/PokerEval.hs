@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE TypeOperators              #-}
 
-module Lib
+module PokerEval
   ( hands
   , cmpEval
   )
@@ -22,7 +22,7 @@ import           Control.Applicative            ( (<|>) )
 import           Control.Monad.State
 
 data Suit = Spades | Clubs | Diamonds | Hearts deriving (Show, Eq, Ord)
-data Rank = R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | R10 | J | Q | K | A deriving (Show, Eq, Ord, Enum)
+data Rank = Two | Three | Four | Five | Six | Seven | Eight | Nine | Ten | Jack | Queen | King | Ace deriving (Show, Eq, Ord, Enum)
 data Card = Card Rank Suit deriving (Show, Eq, Ord)
 
 type HandIndex = Finite 5
@@ -53,19 +53,19 @@ suit =
 
 rank :: Parser Rank
 rank =
-  (char '2' $> R2)
-    <|> (char '3' $> R3)
-    <|> (char '4' $> R4)
-    <|> (char '5' $> R5)
-    <|> (char '6' $> R6)
-    <|> (char '7' $> R7)
-    <|> (char '8' $> R8)
-    <|> (char '9' $> R9)
-    <|> (char 'T' $> R10)
-    <|> (char 'J' $> J)
-    <|> (char 'Q' $> Q)
-    <|> (char 'K' $> K)
-    <|> (char 'A' $> A)
+  (char '2' $> Two)
+    <|> (char '3' $> Three)
+    <|> (char '4' $> Four)
+    <|> (char '5' $> Five)
+    <|> (char '6' $> Six)
+    <|> (char '7' $> Seven)
+    <|> (char '8' $> Eight)
+    <|> (char '9' $> Nine)
+    <|> (char 'T' $> Ten)
+    <|> (char 'J' $> Jack)
+    <|> (char 'Q' $> Queen)
+    <|> (char 'K' $> King)
+    <|> (char 'A' $> Ace)
 
 card :: Parser Card
 card = Card <$> rank <*> suit
@@ -99,9 +99,9 @@ same :: (Eq a) => V.Vector (1 + n) a -> Bool
 same xs = all (== V.head xs) xs
 
 straight :: Ranks 5 -> Maybe Rank
-straight rs | same sums                             = Just (V.head rs)
-            | V.toList rs == A : reverse [R2 .. R5] = Just R5
-            | otherwise                             = Nothing
+straight rs | same sums = Just (V.head rs)
+            | V.toList rs == Ace : reverse [Two .. Five] = Just Five
+            | otherwise = Nothing
   where sums = V.imap (\i r -> fromInteger (getFinite i) + fromEnum r) rs
 
 groups :: Hand -> [(Int, Rank)]

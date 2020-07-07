@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 00e2d4b70bed6c5bbefdaf779001006e48df29e6d881317c270f56b528718ce3
+-- hash: 19ac4ca4e9444966854cdb43a3ffbde3567872c0dacb5a1766f3dd23c494ee91
 
 name:           poker-eval
 version:        0.1.0.0
@@ -27,7 +27,7 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      PokerEval
   other-modules:
       Paths_poker_eval
   hs-source-dirs:
