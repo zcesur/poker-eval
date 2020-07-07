@@ -13,6 +13,8 @@ import           Text.Parsec.Combinator
 
 import           GHC.TypeLits
 import           Data.Finite
+import qualified Data.List                     as L
+import qualified Data.List.NonEmpty            as NE
 import qualified Data.Vector.Sized             as V
 import           Data.Vector.Sized              ( (//) )
 
@@ -108,15 +110,38 @@ isStraight :: Ranks 5 -> Bool
 isStraight rs = same sums
   where sums = V.imap (\i r -> fromInteger (getFinite i) + fromEnum r) rs
 
+groups :: Hand -> [(Int, Rank)]
+groups =
+  L.sortBy (flip compare)
+    . map (\rs -> (length rs, NE.head rs))
+    . NE.group
+    . V.toList
+    . V.map toRank
+
+evalGroups :: Hand -> Maybe HandEval
+evalGroups xs = case groups xs of
+  [(4, x), (1, y)]         -> Just (Quads x y)
+  [(3, x), (2, y)]         -> Just (FullHouse x y)
+  [(3, x), (1, y), (1, z)] -> Just (Trips x (V.fromTuple (y, z)))
+  [(2, x), (2, y), (1, z)] -> Just (TwoPair x y z)
+  [(2, x), (1, y), (1, z), (1, t)] -> Just (OnePair x (V.fromTuple (y, z, t)))
+  _                        -> Nothing
+
 eval :: Hand -> HandEval
 eval cs | isStraight rs && isFlush ss = StraightFlush high
+        | Just (Quads x y) <- gs      = Quads x y
+        | Just (FullHouse x y) <- gs  = FullHouse x y
         | isFlush ss                  = Flush rs
         | isStraight rs               = Straight high
+        | Just (Trips x ks) <- gs     = Trips x ks
+        | Just (TwoPair x y z) <- gs  = TwoPair x y z
+        | Just (OnePair x ks) <- gs   = OnePair x ks
         | otherwise                   = HighCard rs
  where
   high = V.head rs
   rs   = V.map toRank cs'
   ss   = V.map toSuit cs'
+  gs   = evalGroups cs'
   cs'  = sort cs
 
 someFunc :: IO ()
