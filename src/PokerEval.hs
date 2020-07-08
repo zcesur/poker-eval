@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE TypeOperators              #-}
 
 module PokerEval
@@ -14,11 +15,9 @@ import           Data.Finite
 import qualified Data.List                     as L
 import qualified Data.List.NonEmpty            as NE
 import qualified Data.Vector.Sized             as V
-import           Data.Vector.Sized              ( (//) )
 
 import           Data.Functor                   ( ($>) )
 import           Control.Applicative            ( (<|>) )
-import           Control.Monad.State
 
 data Card = Card Rank Suit deriving (Show, Eq, Ord)
 data Rank = Two | Three | Four | Five | Six | Seven | Eight | Nine | Ten | Jack | Queen | King | Ace deriving (Show, Eq, Ord, Enum)
@@ -28,7 +27,6 @@ type Cards n = V.Vector n Card
 type Ranks n = V.Vector n Rank
 type Suits n = V.Vector n Suit
 
-type HandIndex = Finite 5
 newtype Hand s = Hand (Cards 5)
 
 data HandEval = HighCard (Ranks 5)
@@ -52,21 +50,7 @@ instance Sort Sorted where
   sort = id
 
 instance Sort Unsorted where
-  sort (Hand cs) = snd $ execState (mapM_ move handIndices) (Hand cs, Hand cs)
-   where
-    move :: HandIndex -> State (Hand Unsorted, Hand Sorted) ()
-    move i = pop >>= push i
-
-    pop :: State (Hand Unsorted, Hand Sorted) Card
-    pop = state $ \((Hand cs), (Hand cs')) ->
-      (V.maximum cs, (Hand (cs // [(V.maxIndex cs, V.minimum cs)]), Hand cs'))
-
-    push :: HandIndex -> Card -> State (Hand Unsorted, Hand Sorted) ()
-    push i c = state
-      $ \((Hand cs), (Hand cs')) -> ((), (Hand cs, Hand (cs' // [(i, c)])))
-
-    handIndices :: V.Vector 5 HandIndex
-    handIndices = V.generate id
+  sort (Hand cs) = Hand (vsort cs)
 
 instance Sort a => Eq (Hand a) where
   h1 == h2 = eval h1 == eval h2
@@ -137,6 +121,25 @@ suits (Hand cs) = V.map toSuit cs
 
 -- UTILS
 
+
+data SortState = Sorted | Unsorted deriving (Eq, Ord)
+type SVec n a = V.Vector n (SortState, a)
+
+vsort :: (Ord a, KnownNat (n + 1)) => V.Vector (n + 1) a -> V.Vector (n + 1) a
+vsort = fromSVec . go . toSVec
+ where
+  go :: (Ord a, KnownNat (n + 1)) => SVec (n + 1) a -> SVec (n + 1) a
+  go cs = V.foldl' sortOne cs (V.generate id)
+
+  sortOne :: Ord a => SVec (n + 1) a -> Finite (n + 1) -> SVec (n + 1) a
+  sortOne cs n =
+    cs V.// [(V.maxIndex cs, V.index cs n), (n, (Sorted, snd (V.maximum cs)))]
+
+  toSVec :: V.Vector n a -> SVec n a
+  toSVec = V.map ((,) Unsorted)
+
+  fromSVec :: SVec n a -> V.Vector n a
+  fromSVec = V.map snd
 
 same :: (Eq a) => V.Vector (1 + n) a -> Bool
 same xs = all (== V.head xs) xs
