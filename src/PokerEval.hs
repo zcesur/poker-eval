@@ -3,7 +3,11 @@
 {-# LANGUAGE TypeOperators              #-}
 
 module PokerEval
-  ( hands
+  ( Hand
+  , HandEval
+  , hand
+  , hands
+  , eval
   )
 where
 
@@ -27,7 +31,7 @@ type Cards n = V.Vector n Card
 type Ranks n = V.Vector n Rank
 type Suits n = V.Vector n Suit
 
-newtype Hand s = Hand (Cards 5)
+newtype Hand s = Hand (Cards 5) deriving (Show)
 
 data HandEval = HighCard (Ranks 5)
               | OnePair Rank (Ranks 3)
