@@ -11,17 +11,13 @@ module PokerEval
   )
 where
 
+import           Text.Parsec
 import           Text.Parsec.String
-import           Text.Parsec.Char
-
 import           GHC.TypeLits
 import           Data.Finite
 import qualified Data.List                     as L
 import qualified Data.List.NonEmpty            as NE
 import qualified Data.Vector.Sized             as V
-
-import           Data.Functor                   ( ($>) )
-import           Control.Applicative            ( (<|>) )
 
 data Card = Card Rank Suit deriving (Show, Eq, Ord)
 data Rank = Two | Three | Four | Five | Six | Seven | Eight | Nine | Ten | Jack | Queen | King | Ace deriving (Show, Eq, Ord, Enum)
@@ -164,23 +160,23 @@ card = Card <$> rank <*> suit
 
 suit :: Parser Suit
 suit =
-  (char 'S' $> Spades)
-    <|> (char 'C' $> Clubs)
-    <|> (char 'D' $> Diamonds)
-    <|> (char 'H' $> Hearts)
+  (Spades <$ char 'S')
+    <|> (Clubs <$ char 'C')
+    <|> (Diamonds <$ char 'D')
+    <|> (Hearts <$ char 'H')
 
 rank :: Parser Rank
 rank =
-  (char '2' $> Two)
-    <|> (char '3' $> Three)
-    <|> (char '4' $> Four)
-    <|> (char '5' $> Five)
-    <|> (char '6' $> Six)
-    <|> (char '7' $> Seven)
-    <|> (char '8' $> Eight)
-    <|> (char '9' $> Nine)
-    <|> (char 'T' $> Ten)
-    <|> (char 'J' $> Jack)
-    <|> (char 'Q' $> Queen)
-    <|> (char 'K' $> King)
-    <|> (char 'A' $> Ace)
+  (Two <$ char '2')
+    <|> (Three <$ char '3')
+    <|> (Four <$ char '4')
+    <|> (Five <$ char '5')
+    <|> (Six <$ char '6')
+    <|> (Seven <$ char '7')
+    <|> (Eight <$ char '8')
+    <|> (Nine <$ char '9')
+    <|> (Ten <$ char 'T')
+    <|> (Jack <$ char 'J')
+    <|> (Queen <$ char 'Q')
+    <|> (King <$ char 'K')
+    <|> (Ace <$ char 'A')
